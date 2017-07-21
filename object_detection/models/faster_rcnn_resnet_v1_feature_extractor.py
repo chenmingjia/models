@@ -1,4 +1,4 @@
-# Copyright 2017 The TensorFlow Authors. All Rights Reserved1.
+# Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,15 +47,15 @@ class FasterRCNNResnetV1FeatureExtractor(
     """Constructor.
 
     Args:
-      architecture: Architecture name of the Resnet V1 model.
-      resnet_model: Definition of the Resnet V1 model.
-      is_training: See base class.
-      first_stage_features_stride: See base class.
-      reuse_weights: See base class.
-      weight_decay: See base class.
+      architecture: Architecture name of the Resnet V1 model.   //Resnet**知识点**V1模型的架构名称
+      resnet_model: Definition of the Resnet V1 model.          //Resnet V1 model的路径
+      is_training: See base class.                  
+      first_stage_features_stride: See base class.              //第一阶段特征的步阶
+      reuse_weights: See base class.                            //**复用权重
+      weight_decay: See base class.                             //*暂不清楚*
 
     Raises:
-      ValueError: If `first_stage_features_stride` is not 8 or 16.
+      ValueError: If `first_stage_features_stride` is not 8 or 16.   //当第一阶段特征的步阶不是8或者16时会抛出异常
     """
     if first_stage_features_stride != 8 and first_stage_features_stride != 16:
       raise ValueError('`first_stage_features_stride` must be 8 or 16.')
@@ -64,7 +64,7 @@ class FasterRCNNResnetV1FeatureExtractor(
     super(FasterRCNNResnetV1FeatureExtractor, self).__init__(
         is_training, first_stage_features_stride, reuse_weights, weight_decay)
 
-  def preprocess(self, resized_inputs):
+  def preprocess(self, resized_inputs):   // 图片预处理
     """Faster R-CNN Resnet V1 preprocessing.
 
     VGG style channel mean subtraction as described here:
@@ -79,10 +79,10 @@ class FasterRCNNResnetV1FeatureExtractor(
         tensor representing a batch of images.
 
     """
-    channel_means = [123.68, 116.779, 103.939]
+    channel_means = [123.68, 116.779, 103.939]     ？？？超参数？
     return resized_inputs - [[channel_means]]
 
-  def _extract_proposal_features(self, preprocessed_inputs, scope):
+  def _extract_proposal_features(self, preprocessed_inputs, scope):  //第一阶段:提取proposal目标特征
     """Extracts first stage RPN features.
 
     Args:
@@ -94,13 +94,13 @@ class FasterRCNNResnetV1FeatureExtractor(
       rpn_feature_map: A tensor with shape [batch, height, width, depth]
     Raises:
       InvalidArgumentError: If the spatial size of `preprocessed_inputs`
-        (height or width) is less than 33.
-      ValueError: If the created network is missing the required activation.
+        (height or width) is less than 33.  //如果预处理的输入图片的宽高小于33,会抛异常
+      ValueError: If the created network is missing the required activation.  //如果神经网络缺少激励函数抛异常
     """
-    if len(preprocessed_inputs.get_shape().as_list()) != 4:
+    if len(preprocessed_inputs.get_shape().as_list()) != 4:   //输入维度必须是4维度的
       raise ValueError('`preprocessed_inputs` must be 4 dimensional, got a '
                        'tensor of shape %s' % preprocessed_inputs.get_shape())
-    shape_assert = tf.Assert(
+    shape_assert = tf.Assert(                                 //如果预处理的输入图片的宽高小于33,会抛异常
         tf.logical_and(
             tf.greater_equal(tf.shape(preprocessed_inputs)[1], 33),
             tf.greater_equal(tf.shape(preprocessed_inputs)[2], 33)),
@@ -128,7 +128,7 @@ class FasterRCNNResnetV1FeatureExtractor(
     handle = scope + '/%s/block3' % self._architecture
     return activations[handle]
 
-  def _extract_box_classifier_features(self, proposal_feature_maps, scope):
+  def _extract_box_classifier_features(self, proposal_feature_maps, scope):   //第二阶段: 提取Box盒子分类器特征
     """Extracts second stage box classifier features.
 
     Args:
@@ -161,7 +161,7 @@ class FasterRCNNResnetV1FeatureExtractor(
     return proposal_classifier_features
 
 
-class FasterRCNNResnet50FeatureExtractor(FasterRCNNResnetV1FeatureExtractor):
+class FasterRCNNResnet50FeatureExtractor(FasterRCNNResnetV1FeatureExtractor):    //基础上述基类，RCNN 50 特征提取器
   """Faster R-CNN Resnet 50 feature extractor implementation."""
 
   def __init__(self,
@@ -186,7 +186,7 @@ class FasterRCNNResnet50FeatureExtractor(FasterRCNNResnetV1FeatureExtractor):
         first_stage_features_stride, reuse_weights, weight_decay)
 
 
-class FasterRCNNResnet101FeatureExtractor(FasterRCNNResnetV1FeatureExtractor):
+class FasterRCNNResnet101FeatureExtractor(FasterRCNNResnetV1FeatureExtractor):    //基础上述基类，RCNN 101 特征提取器
   """Faster R-CNN Resnet 101 feature extractor implementation."""
 
   def __init__(self,
