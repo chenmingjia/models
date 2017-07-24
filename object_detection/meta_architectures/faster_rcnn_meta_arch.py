@@ -229,32 +229,32 @@ class FasterRCNNMetaArch(model.DetectionModel):                                 
     Args:
       is_training: A boolean indicating whether the training version of the        //同上
         computation graph should be constructed.
-      num_classes: Number of classes.  Note that num_classes *does not*            //类别数量。注意并不包含背景类别。
-        include the background category, so if groundtruth labels take values
-        in {0, 1, .., K-1}, num_classes=K (and not K+1, even though the
+      num_classes: Number of classes.  Note that num_classes *does not*            //类别数量。注意并不包含背景类别。如果真实标签取值在{0, 1, .., K-1}
+        include the background category, so if groundtruth labels take values      //那么num_classes=K，而不是K+1,即使赋予分类器检测目标
+        in {0, 1, .., K-1}, num_classes=K (and not K+1, even though the            //从{0,... K}
         assigned classification targets can range from {0,... K}).
-      image_resizer_fn: A callable for image resizing.  This callable always
-        takes a rank-3 image tensor (corresponding to a single image) and
+      image_resizer_fn: A callable for image resizing.  This callable always       //图片调整大小用的方法。输入必须为3阶图片向量(单图片)并且
+        takes a rank-3 image tensor (corresponding to a single image) and          //返回一个3阶图片向量，也许会是新的空间维度。builders/image_resizer_builder.py
         returns a rank-3 image tensor, possibly with new spatial dimensions.
         See builders/image_resizer_builder.py.
-      feature_extractor: A FasterRCNNFeatureExtractor object.
-      first_stage_only:  Whether to construct only the Region Proposal Network
+      feature_extractor: A FasterRCNNFeatureExtractor object.                      //特征提取器
+      first_stage_only:  Whether to construct only the Region Proposal Network     //是否只用于第一阶段的RPN网络
         (RPN) part of the model.
-      first_stage_anchor_generator: An anchor_generator.AnchorGenerator object
+      first_stage_anchor_generator: An anchor_generator.AnchorGenerator object     //锚点生成器
         (note that currently we only support
         grid_anchor_generator.GridAnchorGenerator objects)
-      first_stage_atrous_rate: A single integer indicating the atrous rate for
+      first_stage_atrous_rate: A single integer indicating the atrous rate for     //第一阶段空洞卷积率
         the single convolution op which is applied to the `rpn_features_to_crop`
         tensor to obtain a tensor to be used for box prediction. Some feature
         extractors optionally allow for producing feature maps computed at
         denser resolutions.  The atrous rate is used to compensate for the
         denser feature maps by using an effectively larger receptive field.
         (This should typically be set to 1).
-      first_stage_box_predictor_arg_scope: Slim arg_scope for conv2d,
+      first_stage_box_predictor_arg_scope: Slim arg_scope for conv2d,              //第一阶段盒子预测器参数域
         separable_conv2d and fully_connected ops for the RPN box predictor.
-      first_stage_box_predictor_kernel_size: Kernel size to use for the
-        convolution op just prior to RPN box predictions.
-      first_stage_box_predictor_depth: Output depth for the convolution op
+      first_stage_box_predictor_kernel_size: Kernel size to use for the            //第一阶段盒子预测器核尺寸
+        convolution op just prior to RPN box predictions. 
+      first_stage_box_predictor_depth: Output depth for the convolution op         //第一阶段盒子预测器深度
         just prior to RPN box predictions.
       first_stage_minibatch_size: The "batch size" to use for computing the
         objectness and location loss of the region proposal network. This
@@ -422,7 +422,7 @@ class FasterRCNNMetaArch(model.DetectionModel):                                 
       return self._second_stage_batch_size
     return self._first_stage_max_proposals
 
-  def preprocess(self, inputs):
+  def preprocess(self, inputs):                                                      //返回特征提取器的预处理
     """Feature-extractor specific preprocessing.
 
     See base class.
@@ -450,8 +450,8 @@ class FasterRCNNMetaArch(model.DetectionModel):                                 
                                  parallel_iterations=self._parallel_iterations)
       return self._feature_extractor.preprocess(resized_inputs)
 
-  def predict(self, preprocessed_inputs):
-    """Predicts unpostprocessed tensors from input tensor.
+  def predict(self, preprocessed_inputs):                                          //包含第一阶段和第二阶段的预测。如果first_stage_only为true
+    """Predicts unpostprocessed tensors from input tensor.                         //就只会返回第一阶段RPN的预测结果。
 
     This function takes an input batch of images and runs it through the
     forward pass of the network to yield "raw" un-postprocessed predictions.
