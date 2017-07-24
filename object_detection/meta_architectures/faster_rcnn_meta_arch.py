@@ -21,49 +21,49 @@ See Faster R-CNN: Ren, Shaoqing, et al.
 "Faster R-CNN: Towards real-time object detection with region proposal
 networks." Advances in neural information processing systems. 2015.
 
-We allow for two modes: first_stage_only=True and first_stage_only=False.  In
-the former setting, all of the user facing methods (e.g., predict, postprocess,
-loss) can be used as if the model consisted only of the RPN, returning class
-agnostic proposals (these can be thought of as approximate detections with no
-associated class information).  In the latter setting, proposals are computed,
-then passed through a second stage "box classifier" to yield (multi-class)
+We allow for two modes: first_stage_only=True and first_stage_only=False.  In       //允许两种模型，即是否开启first_stage_only。在过去的
+the former setting, all of the user facing methods (e.g., predict, postprocess,     //设置中，那些面向用户的方法(包括预测、后置处理、损失)
+loss) can be used as if the model consisted only of the RPN, returning class        //只在模型为RPN下可以被使用，并返回proposals。（你可以把
+agnostic proposals (these can be thought of as approximate detections with no       //这种近似的预测与类信息无关。）在后续的设置中，proposals
+associated class information).  In the latter setting, proposals are computed,      //会参与运算。他们会被传递到第二阶段“box分类器”来进行
+then passed through a second stage "box classifier" to yield (multi-class)          //多种类预测
 detections.
 
-Implementations of Faster R-CNN models must define a new
-FasterRCNNFeatureExtractor and override three methods: `preprocess`,
-`_extract_proposal_features` (the first stage of the model), and
-`_extract_box_classifier_features` (the second stage of the model). Optionally,
+Implementations of Faster R-CNN models must define a new                            //实现Faster R-CNN必须要定义FasterRCNNFeatureExtractor
+FasterRCNNFeatureExtractor and override three methods: `preprocess`,                //和重载`preprocess`、`_extract_proposal_features`
+`_extract_proposal_features` (the first stage of the model), and                    //`_extract_box_classifier_features`方法。其中
+`_extract_box_classifier_features` (the second stage of the model). Optionally,     //restore_fn可以被重写
 the `restore_fn` method can be overridden.  See tests for an example.
 
-A few important notes:
-+ Batching conventions:  We support batched inference and training where
-all images within a batch have the same resolution.  Batch sizes are determined
+A few important notes:                                                              //注意事项
++ Batching conventions:  We support batched inference and training where            //支持对一个批次所有图片进行同种规格的推断和训练。批尺寸
+all images within a batch have the same resolution.  Batch sizes are determined     //根据输入向量动态决定(而不是根据模型的构造器来写死决定)
 dynamically via the shape of the input tensors (rather than being specified
 directly as, e.g., a model constructor).
 
-A complication is that due to non-max suppression, we are not guaranteed to get
-the same number of proposals from the first stage RPN (region proposal network)
-for each image (though in practice, we should often get the same number of
-proposals).  For this reason we pad to a max number of proposals per image
-within a batch. This `self.max_num_proposals` property is set to the
-`first_stage_max_proposals` parameter at inference time and the
+A complication is that due to non-max suppression, we are not guaranteed to get     //其中一个问题是非极大值抑制。我们无法保证在第一阶段的RPN1
+the same number of proposals from the first stage RPN (region proposal network)     //中每张图片得到的proposals的数量是一样的。（虽然在实践中）
+for each image (though in practice, we should often get the same number of          //我们往往会得到同样的数量）。因此我们将同一批次的每张图片
+proposals).  For this reason we pad to a max number of proposals per image          //的proposals填充到一个最大数量。`self.max_num_proposals`
+within a batch. This `self.max_num_proposals` property is set to the                //用来设置`first_stage_max_proposals`在推测时的参数并且
+`first_stage_max_proposals` parameter at inference time and the                     //`second_stage_batch_size`为训练时，传递给盒分类器的参数
 `second_stage_batch_size` at training time since we subsample the batch to
 be sent through the box classifier during training.
 
-For the second stage of the pipeline, we arrange the proposals for all images
-within the batch along a single batch dimension.  For example, the input to
-_extract_box_classifier_features is a tensor of shape
-`[total_num_proposals, crop_height, crop_width, depth]` where
-total_num_proposals is batch_size * self.max_num_proposals.  (And note that per
+For the second stage of the pipeline, we arrange the proposals for all images       //在第二阶段的流水线, 我们安排批次的所有图片的proposals
+within the batch along a single batch dimension.  For example, the input to         //在同一个批维度进行处理。例如_extract_box_classifier_features
+_extract_box_classifier_features is a tensor of shape                               //的输入是一个向量的形状。`[total_num_proposals, crop_height, crop_width, depth]`
+`[total_num_proposals, crop_height, crop_width, depth]` where                       //其中total_num_proposals是批尺寸和最大proposals的乘积
+total_num_proposals is batch_size * self.max_num_proposals.  (And note that per     //
 the above comment, a subset of these entries correspond to zero paddings.)
 
 + Coordinate representations:
-Following the API (see model.DetectionModel definition), our outputs after
+Following the API (see model.DetectionModel definition), our outputs after          //大意为锚点和盒子的坐标为绝对坐标
 postprocessing operations are always normalized boxes however, internally, we
 sometimes convert to absolute --- e.g. for loss computation.  In particular,
 anchors and proposal_boxes are both represented as absolute coordinates.
 
-TODO: Support TPU implementations and sigmoid loss.
+TODO: Support TPU implementations and sigmoid loss.                                 //以后将会支持TPU
 """
 from abc import abstractmethod
 from functools import partial
@@ -85,10 +85,10 @@ from object_detection.utils import variables_helper
 slim = tf.contrib.slim
 
 
-class FasterRCNNFeatureExtractor(object):
+class FasterRCNNFeatureExtractor(object):                                      //FasterRCNN特征提取器
   """Faster R-CNN Feature Extractor definition."""
 
-  def __init__(self,
+  def __init__(self,                                                           //初始化
                is_training,
                first_stage_features_stride,
                reuse_weights=None,
@@ -96,11 +96,11 @@ class FasterRCNNFeatureExtractor(object):
     """Constructor.
 
     Args:
-      is_training: A boolean indicating whether the training version of the
+      is_training: A boolean indicating whether the training version of the    //是否训练版本的计算图被构建
         computation graph should be constructed.
-      first_stage_features_stride: Output stride of extracted RPN feature map.
-      reuse_weights: Whether to reuse variables. Default is None.
-      weight_decay: float weight decay for feature extractor (default: 0.0).
+      first_stage_features_stride: Output stride of extracted RPN feature map. //第一阶段的特征步幅: RPN特征图谱的输出的步幅
+      reuse_weights: Whether to reuse variables. Default is None.              //是否重用权重变量。默认为无
+      weight_decay: float weight decay for feature extractor (default: 0.0).   //特征提取器的权重衰减。默认为0
     """
     self._is_training = is_training
     self._first_stage_features_stride = first_stage_features_stride
@@ -108,11 +108,11 @@ class FasterRCNNFeatureExtractor(object):
     self._weight_decay = weight_decay
 
   @abstractmethod
-  def preprocess(self, resized_inputs):
+  def preprocess(self, resized_inputs):                                         //第0阶段:预处理
     """Feature-extractor specific preprocessing (minus image resizing)."""
     pass
 
-  def extract_proposal_features(self, preprocessed_inputs, scope):
+  def extract_proposal_features(self, preprocessed_inputs, scope):              //第一阶段:提取proposal特征(主要使用RPN网络)
     """Extracts first stage RPN features.
 
     This function is responsible for extracting feature maps from preprocessed
@@ -131,11 +131,11 @@ class FasterRCNNFeatureExtractor(object):
       return self._extract_proposal_features(preprocessed_inputs, scope)
 
   @abstractmethod
-  def _extract_proposal_features(self, preprocessed_inputs, scope):
+  def _extract_proposal_features(self, preprocessed_inputs, scope):           
     """Extracts first stage RPN features, to be overridden."""
     pass
 
-  def extract_box_classifier_features(self, proposal_feature_maps, scope):
+  def extract_box_classifier_features(self, proposal_feature_maps, scope):              //第二阶段:盒子分类
     """Extracts second stage box classifier features.
 
     Args:
@@ -157,7 +157,7 @@ class FasterRCNNFeatureExtractor(object):
     """Extracts second stage box classifier features, to be overridden."""
     pass
 
-  def restore_from_classification_checkpoint_fn(
+  def restore_from_classification_checkpoint_fn(                                     //可选阶段:从tensorflow图谱中加载checkpoint
       self,
       checkpoint_path,
       first_stage_feature_extractor_scope,
@@ -166,7 +166,7 @@ class FasterRCNNFeatureExtractor(object):
 
     Args:
       checkpoint_path: path to checkpoint to restore.
-      first_stage_feature_extractor_scope: A scope name for the first stage
+      first_stage_feature_extractor_scope: A scope name for the first stage         //**变量域名**
         feature extractor.
       second_stage_feature_extractor_scope: A scope name for the second stage
         feature extractor.
@@ -191,7 +191,7 @@ class FasterRCNNFeatureExtractor(object):
     return restore
 
 
-class FasterRCNNMetaArch(model.DetectionModel):
+class FasterRCNNMetaArch(model.DetectionModel):                                    //FasterRCNNMetaArch 元架构(基础 model.DetectionModel)
   """Faster R-CNN Meta-architecture definition."""
 
   def __init__(self,
@@ -227,9 +227,9 @@ class FasterRCNNMetaArch(model.DetectionModel):
     """FasterRCNNMetaArch Constructor.
 
     Args:
-      is_training: A boolean indicating whether the training version of the
+      is_training: A boolean indicating whether the training version of the        //同上
         computation graph should be constructed.
-      num_classes: Number of classes.  Note that num_classes *does not*
+      num_classes: Number of classes.  Note that num_classes *does not*            //类别数量。注意并不包含背景类别。
         include the background category, so if groundtruth labels take values
         in {0, 1, .., K-1}, num_classes=K (and not K+1, even though the
         assigned classification targets can range from {0,... K}).
